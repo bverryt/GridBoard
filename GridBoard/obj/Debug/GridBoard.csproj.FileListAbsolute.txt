@@ -1,0 +1,21 @@
+d:\git\PlayGrid\PlayGrid\bin\GridBoard.dll
+d:\git\PlayGrid\PlayGrid\bin\GridBoard.pdb
+d:\git\PlayGrid\PlayGrid\bin\EntityFramework.dll
+d:\git\PlayGrid\PlayGrid\bin\EntityFramework.xml
+d:\git\PlayGrid\PlayGrid\obj\Debug\ResolveAssemblyReference.cache
+d:\git\PlayGrid\PlayGrid\obj\Debug\GridBoard.dll
+d:\git\PlayGrid\PlayGrid\obj\Debug\GridBoard.pdb
+D:\Git\GridBoard\GridBoard\bin\GridBoard.dll
+D:\Git\GridBoard\GridBoard\bin\GridBoard.pdb
+D:\Git\GridBoard\GridBoard\bin\EntityFramework.dll
+D:\Git\GridBoard\GridBoard\bin\EntityFramework.xml
+D:\Git\GridBoard\GridBoard\obj\Debug\ResolveAssemblyReference.cache
+D:\Git\GridBoard\GridBoard\obj\Debug\GridBoard.dll
+D:\Git\GridBoard\GridBoard\obj\Debug\GridBoard.pdb
+D:\Data\Google Drive\Personal\Projects\GridBoard\GridBoard\bin\GridBoard.dll
+D:\Data\Google Drive\Personal\Projects\GridBoard\GridBoard\bin\GridBoard.pdb
+D:\Data\Google Drive\Personal\Projects\GridBoard\GridBoard\bin\EntityFramework.dll
+D:\Data\Google Drive\Personal\Projects\GridBoard\GridBoard\bin\EntityFramework.xml
+D:\Data\Google Drive\Personal\Projects\GridBoard\GridBoard\obj\Debug\ResolveAssemblyReference.cache
+D:\Data\Google Drive\Personal\Projects\GridBoard\GridBoard\obj\Debug\GridBoard.dll
+D:\Data\Google Drive\Personal\Projects\GridBoard\GridBoard\obj\Debug\GridBoard.pdb
