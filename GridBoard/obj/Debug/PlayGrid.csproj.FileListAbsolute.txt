@@ -1,0 +1,7 @@
+d:\git\PlayGrid\PlayGrid\bin\PlayGrid.dll
+d:\git\PlayGrid\PlayGrid\bin\PlayGrid.pdb
+d:\git\PlayGrid\PlayGrid\bin\EntityFramework.dll
+d:\git\PlayGrid\PlayGrid\bin\EntityFramework.xml
+d:\git\PlayGrid\PlayGrid\obj\Debug\ResolveAssemblyReference.cache
+d:\git\PlayGrid\PlayGrid\obj\Debug\PlayGrid.dll
+d:\git\PlayGrid\PlayGrid\obj\Debug\PlayGrid.pdb
