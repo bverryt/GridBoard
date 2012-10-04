@@ -3,9 +3,9 @@
 function init() {
 	$('body').disableSelection();
 	initBoard(10, 20);
-	initStack(2, 3);
-	initStack(5, 2); 
-	initStack(20, 1);
+	initStack(2, 3, 50);
+	initStack(5, 2, 40); 
+	initStack(20, 1, 15);
 	$("#stack").width($("#board").width() - 22);
 }
 
@@ -24,11 +24,11 @@ function initBoard(rows, cols) {
 	}	
 }
 
-function initStack(amount, size) {
+function initStack(amount, size, value) {
 	$("#stack").droppable({ drop: handleTileRestack });
 	for (var i = 0; i < amount; i++) {
 		var range = 2; 
-		var value = Math.floor((Math.random()*10)+1);
+		// var value = Math.floor((Math.random()*10)+1);
 		var tile = $("<div/>")
 			.addClass("tile").text(value)
 			.data("range", range).data("value", value).data("size", size)
@@ -42,6 +42,8 @@ function initStack(amount, size) {
 /* == EVENT HANDLERS == */
 
 function handleTilePlacement(event, ui) {
+	// TODO: check if ALL spots are available
+
 	var tile = ui.draggable;
 	removeTile($(tile.data("spot")), tile); // remove from old spot
 	placeTile($(this), tile); // place on new spot	

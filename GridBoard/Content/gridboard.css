@@ -3,7 +3,7 @@ div#area { margin: 10px; }
 
 /* spot/tile size */ 
 table#board .spot , .tile { text-align: center; color: #030; font-size: 10pt;}
-table#board .spot , .tile { width: 20px; height: 20px; }
+table#board .spot , .tile { width: 30px; height: 30px; }
 
 
 /* board */
