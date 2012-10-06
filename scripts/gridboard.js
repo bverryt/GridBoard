@@ -18,8 +18,8 @@ function init() {
 	var stack = $(ID_STACK);
 	createTiles(stack, 1, 10, 2, 10);
 	createTiles(stack, 2, 20, 2, 5);
-	createTiles(stack, 3, 50, 2, 3);
-	createTiles(stack, 4, 200, 2, 2);
+	createTiles(stack, 3, 50, 3, 3);
+	createTiles(stack, 4, 200, 4, 2);
 	stack.droppable({ drop: handleTileRestack });
 	stack.width(board.width() - 22);
 }
