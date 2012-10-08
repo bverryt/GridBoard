@@ -1,21 +1,25 @@
 ﻿$(init);
 
-var NUM_OF_ROWS = 15; var NUM_OF_COLS = 20;
+var NUM_OF_ROWS = 15; 
+var NUM_OF_COLS = 20;
 
-var ID_AREA = "#area", ID_BOARD = "#board", ID_STACK = "#stack";
-var CLASS_ROW = "row", CLASS_TILE = "tile", CLASS_SPOT = "spot";
-var DATA_SIZE = "size", DATA_VALUE = "value", DATA_RANGE = "range";
-var DATA_TILE = "tile", DATA_SPOT = "spot";
-var TAG_TR = "<tr/>", TAG_TD = "<td/>", TAG_DIV = "<div/>";
-var ELEM_TR = "tr";
+var DATA_SIZE = "size";
+var DATA_VALUE = "value";
+var DATA_RANGE = "range";
+var DATA_TILE = "tile";
+var DATA_SPOT = "spot";
+
+var board = new Array();
+var logcounter = 1;
+
 
 function init() {
-	$(ID_AREA).disableSelection();
+	$("#area").disableSelection();
 
-	var board = $(ID_BOARD);
+	var board = $("#board");
 	createSpots(board, NUM_OF_ROWS, NUM_OF_COLS);
 
-	var stack = $(ID_STACK);
+	var stack = $("#stack");
 	createTiles(stack, 1, 10, 2, 10);
 	createTiles(stack, 2, 20, 2, 5);
 	createTiles(stack, 3, 50, 2, 3);
@@ -28,33 +32,31 @@ function init() {
 
 function createSpots(board, rows, cols) {
 	for (var y = 1; y <= rows; y++) {
-		var row = $(TAG_TR).addClass(CLASS_ROW).appendTo(board);
+		var row = $("<tr/>").addClass("row").appendTo(board);
 		for (var x = 1; x <= cols; x++) {
-			var spot = $(TAG_TD)
-				.addClass(CLASS_SPOT)
-				.droppable({
-					accept: validateTile,
-					tolerance: 'pointer',
-					hoverClass: 'hovered',
-					drop: handleTilePlacement })
+			var spot = $("<td/>")
+				.addClass("spot")
+				.droppable({accept: '.tile', tolerance: 'pointer', hoverClass: 'hovered', over: handleSpotOver, drop: handleTilePlacement })
 				.appendTo(row);
+
+			if (board == null) board = new Array();
+			if (board[x] == null) board[x] = new Array();
+			board[x][y] = 0;
 		}
 	}	
 }
 
 function createTiles(stack, size, value, range, amount) {
 	for (var i = 0; i < amount; i++) {
-		var tile = $(TAG_DIV)
-			.addClass(CLASS_TILE)
+		var id = "tile" + (stack.find(".tile").length + 1);
+		var tile = $("<div/>")
+			.addClass("tile")
 			.text(value)
+			.attr('id', id)
 			.data(DATA_RANGE, range)
 			.data(DATA_VALUE, value)
 			.data(DATA_SIZE, size)
-			.draggable({
-				start: handleTileDrag,
-				revert: 'invalid',
-				stack: '.tile', 
-				cursorAt: { left: 5, top: 5 } })
+			.draggable({ start: handleDragStart, revert: 'invalid', stack: '.tile',  cursorAt: { left: 5, top: 5 } })
 			.appendTo(stack);
 
 		// set the correct size for the tile. Add extra pixels to account for gridlines.
@@ -63,21 +65,31 @@ function createTiles(stack, size, value, range, amount) {
 	}
 }
 
-function calculateSize(blockSize, px) {
-	return px * size + (size - 1);
-}
+
 
 /* == EVENT HANDLERS == */
 
-function handleTileDrag() {
-	var tile = this;
-	var spot = $(tile).data(DATA_SPOT);
-	if (spot == null) return; // don't cleanup when tile is picked up from stack
-	cleanupTile($(tile).data(DATA_SPOT), tile); // remove from old spot
+function handleDragStart(event, ui) {
+	$("#board td.spot").draggable("option", "accept", ".tile"); // reset all spots
+	var spot = $(this).data(DATA_SPOT);
+	if (spot != null)cleanupTile(spot, this); // remove from old spot
 }
 
+function handleSpotOver(event, ui) {
+	var spot = $(this);
+	var tile = ui.draggable;
+	var size = $(tile).data("size");
+
+	var valid = validateSpot(spot, size);
+	if (!valid) {
+		var selector = ".tile:not(#" + $(tile).attr('id') + ")";
+		spot.droppable('option', 'accept', selector).removeClass('hovered');
+		// var coords = getCoords(spot); log("invalid $1:$2", coords.x, coords.y);
+	}
+}
+
+
 function handleTilePlacement(event, ui) {
-	// TODO: check if ALL spots are available
 	var tile = ui.draggable;
 	placeTile($(this), tile); // place on new spot	
 	tile.position({ of: $(this), my: 'left top', at: 'left top' });
@@ -85,24 +97,18 @@ function handleTilePlacement(event, ui) {
 
 function handleTileRestack(event, ui) {
 	var tile = ui.draggable;
-	cleanupTile($(tile.data(DATA_SPOT)), tile); // remove from old spot
+	var spot = $(tile.data(DATA_SPOT));
+	cleanupTile(spot, tile); // remove from old spot
 }
 
-function validateTile(draggable) {
-	var tile = $(draggable);
-	if (!tile.hasClass(CLASS_TILE)) return false;
-
-	var size = tile.data(DATA_SIZE);
-	if (size == 1) return true;
-	
-	var coords = getCoords(this);
-	
-	// TODO
-
-	return true;
-}
 
 /* == ACTIONS -- */
+
+function validateSpot(spot, size) {
+	if (size == 1) return true;
+	var coords = getCoords(spot);
+	return false;
+}
 
 function placeTile(spot, tile) {
 	processTileChange(spot, tile, spotActivate, function (a, b) { return a + b; });
@@ -130,7 +136,7 @@ function updateSpotValue(spot, value, valueCalc) {
 	var newvalue = valueCalc(oldvalue, value);
 	$(spot).data(DATA_VALUE, newvalue);
 	$(spot).empty();
-	if (newvalue > 0) $(TAG_DIV).appendTo(spot).text(newvalue);
+	if (newvalue > 0) $("<div/>").appendTo(spot).text(newvalue);
 }
 
 function spotDeactivate(originSpot, spot, tile) {
@@ -149,11 +155,26 @@ function spotActivate(originSpot, spot, tile) {
 
 /* == HELPERS == */
 
+function log(message, p1, p2, p3, p4) {
+	var message = message.replace("$1",p1).replace("$2",p2).replace("$3",p3).replace("$4",p4);
+	console.log(logcounter++ + ": " + message);
+}
+
+function calculateSize(blockSize, px) {
+	return px * size + (size - 1);
+}
+
 function getCoords(spot) {
 	var row = $(spot).parent("tr");
 	var x = $(row).find(".spot").index(spot) + 1;
 	var y = $("#board tr").index(row) + 1;
 	return { x: x, y: y };
+}
+
+function getSpot(x, y) {
+	var row = $("#board tr.row").eq(y);
+	var spot = row.find("td.spot").eq(x);
+	return spot;
 }
 
 function getOccupiedSpots(originSpot, size) {

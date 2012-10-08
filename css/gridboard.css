@@ -11,6 +11,7 @@
 #board .spot div { color: #ccc; font-size: 8pt; overflow: hidden; }
 #board .spot.hovered { background-color: #ccc;}
 #board .spot.active { background-color: #ccc;}
+#board .spot.highlight { background-color: #f00;}
 
 /* stack */
 #stack { border: solid 1px #ccc; width: 440px; height: 200px; padding: 10px; margin-top: 10px; }
