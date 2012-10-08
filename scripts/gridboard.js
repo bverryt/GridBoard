@@ -1,21 +1,16 @@
 ﻿$(init);
 
-var NUM_OF_ROWS = 15; var NUM_OF_COLS = 20;
+var NUM_OF_ROWS = 15; 
+var NUM_OF_COLS = 20;
 
-var ID_AREA = "#area", ID_BOARD = "#board", ID_STACK = "#stack";
-var CLASS_ROW = "row", CLASS_TILE = "tile", CLASS_SPOT = "spot";
-var DATA_SIZE = "size", DATA_VALUE = "value", DATA_RANGE = "range";
-var DATA_TILE = "tile", DATA_SPOT = "spot";
-var TAG_TR = "<tr/>", TAG_TD = "<td/>", TAG_DIV = "<div/>";
-var ELEM_TR = "tr";
+var lookup; // look up spots by [x][y] 
+var logcounter = 1;
 
 function init() {
-	$(ID_AREA).disableSelection();
-
-	var board = $(ID_BOARD);
+	$("#area").disableSelection();
+	var board = $("#board");
 	createSpots(board, NUM_OF_ROWS, NUM_OF_COLS);
-
-	var stack = $(ID_STACK);
+	var stack = $("#stack");
 	createTiles(stack, 1, 10, 2, 10);
 	createTiles(stack, 2, 20, 2, 5);
 	createTiles(stack, 3, 50, 2, 3);
@@ -28,33 +23,31 @@ function init() {
 
 function createSpots(board, rows, cols) {
 	for (var y = 1; y <= rows; y++) {
-		var row = $(TAG_TR).addClass(CLASS_ROW).appendTo(board);
+		var row = $("<tr/>").addClass("row").appendTo(board);
 		for (var x = 1; x <= cols; x++) {
-			var spot = $(TAG_TD)
-				.addClass(CLASS_SPOT)
-				.droppable({
-					accept: validateTile,
-					tolerance: 'pointer',
-					hoverClass: 'hovered',
-					drop: handleTilePlacement })
+			var spot = $("<td/>")
+				.addClass("spot")
+				.droppable({accept: ".tile", tolerance: "pointer", hoverClass: "hovered", over: handleSpotOver, drop: handleTilePlacement })
 				.appendTo(row);
+
+			if (lookup == null) lookup = new Array(NUM_OF_COLS);
+			if (lookup[x] == null) lookup[x] = new Array(NUM_OF_ROWS);
+			lookup[x][y] = null;
 		}
 	}	
 }
 
 function createTiles(stack, size, value, range, amount) {
 	for (var i = 0; i < amount; i++) {
-		var tile = $(TAG_DIV)
-			.addClass(CLASS_TILE)
+		var id = "tile" + (stack.find(".tile").length + 1);
+		var tile = $("<div/>")
+			.addClass("tile")
 			.text(value)
-			.data(DATA_RANGE, range)
-			.data(DATA_VALUE, value)
-			.data(DATA_SIZE, size)
-			.draggable({
-				start: handleTileDrag,
-				revert: 'invalid',
-				stack: '.tile', 
-				cursorAt: { left: 5, top: 5 } })
+			.attr("id", id)
+			.data("range", range)
+			.data("value", value)
+			.data("size", size)
+			.draggable({ start: handleDragStart, revert: "invalid", stack: ".tile",  cursorAt: { left: 5, top: 5 } })
 			.appendTo(stack);
 
 		// set the correct size for the tile. Add extra pixels to account for gridlines.
@@ -63,46 +56,54 @@ function createTiles(stack, size, value, range, amount) {
 	}
 }
 
-function calculateSize(blockSize, px) {
-	return px * size + (size - 1);
-}
-
 /* == EVENT HANDLERS == */
 
-function handleTileDrag() {
-	var tile = this;
-	var spot = $(tile).data(DATA_SPOT);
-	if (spot == null) return; // don't cleanup when tile is picked up from stack
-	cleanupTile($(tile).data(DATA_SPOT), tile); // remove from old spot
+function handleDragStart(event, ui) {
+	$("#board td.spot").draggable("option", "accept", ".tile"); // reset all spots to accept all tiles
+}
+
+function handleSpotOver(event, ui) {
+	var spot = $(this);
+	var tile = ui.draggable;
+	if (!validateSpot(spot, tile)) { // if invalid
+		var selector = ".tile:not(#" + $(tile).attr("id") + ")"; // don't accept the current tile
+		spot.droppable("option", "accept", selector).removeClass("hovered");
+	}
 }
 
 function handleTilePlacement(event, ui) {
-	// TODO: check if ALL spots are available
 	var tile = ui.draggable;
-	placeTile($(this), tile); // place on new spot	
-	tile.position({ of: $(this), my: 'left top', at: 'left top' });
+	var oldSpot = $(tile).data("spot");
+	var newSpot = $(this);
+	cleanupTile(oldSpot, tile) // cleanup old spot
+	placeTile(newSpot, tile); // place on new spot	
+	tile.position({ of: $(this), my: "left top", at: "left top" });
 }
 
 function handleTileRestack(event, ui) {
 	var tile = ui.draggable;
-	cleanupTile($(tile.data(DATA_SPOT)), tile); // remove from old spot
-}
-
-function validateTile(draggable) {
-	var tile = $(draggable);
-	if (!tile.hasClass(CLASS_TILE)) return false;
-
-	var size = tile.data(DATA_SIZE);
-	if (size == 1) return true;
-	
-	var coords = getCoords(this);
-	
-	// TODO
-
-	return true;
+	var oldSpot = $(tile.data("spot"));
+	cleanupTile(oldSpot, tile); // remove from old spot
 }
 
 /* == ACTIONS -- */
+
+function validateSpot(spot, tile) {
+	var size = $(tile).data("size");
+	if (size == 1) return true;
+
+	var coords = getCoords(spot);
+	if (coords.x + size - 1 > NUM_OF_COLS) return false; // don't allow overlap of right edge
+	if (coords.y + size - 1 > NUM_OF_ROWS) return false; // don't allow overlap of bottom edge
+
+	var id = $(tile).attr("id");
+	for (var x = coords.x; x < coords.x + size; x++)
+		for (var y = coords.y; y < coords.y + size; y++) {
+			if (lookup[x][y] != null && lookup[x][y] != id) return false;
+		}
+
+	return true;
+}
 
 function placeTile(spot, tile) {
 	processTileChange(spot, tile, spotActivate, function (a, b) { return a + b; });
@@ -113,41 +114,46 @@ function cleanupTile(spot, tile) {
 }
 
 function processTileChange(spot, tile, spotAction, valueCalc) {
-	var value = $(tile).data(DATA_VALUE);
-	var range = $(tile).data(DATA_RANGE);
-	var size = $(tile).data(DATA_SIZE);	
-	
+	var value = $(tile).data("value");
+	var range = $(tile).data("range");
+	var size = $(tile).data("size");	
+	// occupied spots = spots covered by the tile itself
 	var occupiedSpots = getOccupiedSpots(spot, size);
 	$(occupiedSpots).each(function () { spotAction(spot, this, tile); });
-	
+	// affected spots = spots within range
 	var affectedSpots = getAffectedSpots(spot, range, size);
 	$(affectedSpots).each(function () { updateSpotValue(this, value, valueCalc); });
 }
 
 function updateSpotValue(spot, value, valueCalc) {
-	var oldvalue = $(spot).data(DATA_VALUE);
+	var oldvalue = $(spot).data("value");
 	if (oldvalue == null) oldvalue = 0;
 	var newvalue = valueCalc(oldvalue, value);
-	$(spot).data(DATA_VALUE, newvalue);
+	$(spot).data("value", newvalue);
 	$(spot).empty();
-	if (newvalue > 0) $(TAG_DIV).appendTo(spot).text(newvalue);
+	if (newvalue > 0) $("<div/>").appendTo(spot).text(newvalue);
 }
 
 function spotDeactivate(originSpot, spot, tile) {
-	$(tile).data(DATA_SPOT, null);
-	$(spot).data(DATA_TILE, null);
-	$(spot).droppable('enable');
-	$(spot).removeClass('active');
+	$(tile).data("spot", null);
+	$(spot).removeClass("active");
+	var coords = getCoords(spot);
+	lookup[coords.x][coords.y] = null;
 }
 
 function spotActivate(originSpot, spot, tile) {
-	$(tile).data(DATA_SPOT, originSpot);
-	$(spot).data(DATA_TILE, tile);
-	$(spot).droppable('disable');
-	$(spot).addClass('active');
+	$(tile).data("spot", originSpot);
+	$(spot).addClass("active");
+	var coords = getCoords(spot);
+	lookup[coords.x][coords.y] = tile.attr("id");
 }
 
 /* == HELPERS == */
+
+function log(message, p1, p2, p3, p4) {
+	var message = message.replace("$1",p1).replace("$2",p2).replace("$3",p3).replace("$4",p4);
+	console.log(logcounter++ + ": " + message);
+}
 
 function getCoords(spot) {
 	var row = $(spot).parent("tr");
@@ -159,7 +165,6 @@ function getCoords(spot) {
 function getOccupiedSpots(originSpot, size) {
 	var occupiedSpots = [];
 	var origin = getCoords(originSpot);
-
 	// TODO: find a better occupied/affected test than scanning the entire board
 	$("#board td").each(function () {
 		var coords = getCoords(this);
@@ -179,7 +184,6 @@ function getAffectedSpots(originSpot, range, size) {
 			if (coords.y >= origin.y - range && coords.y < origin.y + range + size)
 				affectedSpots.push(this);
 	});
-	
 	return affectedSpots;
 }
 
