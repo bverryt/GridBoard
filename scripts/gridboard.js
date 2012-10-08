@@ -1,4 +1,11 @@
-﻿$(init);
+﻿// TODO: allow different sizes (2x3 etc)
+// TODO: allow save/load of board + stack
+// TODO: let user add items to stack
+// TODO: let user edit values
+// TODO: add residential buildings ('receivers')
+// TODO: use different colours (decorations/attractions)
+
+$(init);
 
 var NUM_OF_ROWS = 15; 
 var NUM_OF_COLS = 20;
@@ -34,7 +41,7 @@ function createSpots(board, rows, cols) {
 			if (lookup[x] == null) lookup[x] = new Array(NUM_OF_ROWS);
 			lookup[x][y] = null;
 		}
-	}	
+	}
 }
 
 function createTiles(stack, size, value, range, amount) {
@@ -54,6 +61,8 @@ function createTiles(stack, size, value, range, amount) {
 		tile.height(tile.height() * size + (size - 1));
 		tile.width(tile.width() * size + (size - 1));
 	}
+
+	stack.append("<br/>");
 }
 
 /* == EVENT HANDLERS == */
@@ -75,7 +84,8 @@ function handleTilePlacement(event, ui) {
 	var tile = ui.draggable;
 	var oldSpot = $(tile).data("spot");
 	var newSpot = $(this);
-	cleanupTile(oldSpot, tile) // cleanup old spot
+
+	if (oldSpot != null) cleanupTile(oldSpot, tile) // cleanup old spot
 	placeTile(newSpot, tile); // place on new spot	
 	tile.position({ of: $(this), my: "left top", at: "left top" });
 }
@@ -117,15 +127,18 @@ function processTileChange(spot, tile, spotAction, valueCalc) {
 	var value = $(tile).data("value");
 	var range = $(tile).data("range");
 	var size = $(tile).data("size");	
+	
 	// occupied spots = spots covered by the tile itself
 	var occupiedSpots = getOccupiedSpots(spot, size);
 	$(occupiedSpots).each(function () { spotAction(spot, this, tile); });
+	
 	// affected spots = spots within range
 	var affectedSpots = getAffectedSpots(spot, range, size);
 	$(affectedSpots).each(function () { updateSpotValue(this, value, valueCalc); });
 }
 
 function updateSpotValue(spot, value, valueCalc) {
+	var coords = getCoords(spot);
 	var oldvalue = $(spot).data("value");
 	if (oldvalue == null) oldvalue = 0;
 	var newvalue = valueCalc(oldvalue, value);
@@ -181,7 +194,7 @@ function getAffectedSpots(originSpot, range, size) {
 	$("#board td").each(function () {
 		var coords = getCoords(this);
 		if (coords.x >= origin.x - range && coords.x < origin.x + range + size)
-			if (coords.y >= origin.y - range && coords.y < origin.y + range + size)
+			if (coords.y >= origin.y - range && coords.y < origin.y + range + size) 
 				affectedSpots.push(this);
 	});
 	return affectedSpots;
