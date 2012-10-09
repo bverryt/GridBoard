@@ -3,6 +3,7 @@
 // TODO: let user add items to stack
 // TODO: add residential buildings ('receivers')
 // TODO: use different colours (decorations/attractions)
+// TODO: re-write as a generic boardgame plugin
 
 $(init);
 
@@ -29,7 +30,7 @@ function init() {
 	repeat( 3, function () { createTile(2,3,25,3); }); stack.append(br);
 	repeat( 2, function () { createTile(4,4,50,3); }); stack.append(br);
 
-	stack.droppable({ drop: handleTileRestack });
+	stack.droppable({ drop: handleTileRestack, tolerance: 'fit' });
 	stack.height(board.height() - 22);
 }
 
@@ -59,6 +60,7 @@ function createTile(width, height, value, range) {
 	var tile = $("<div/>")
 		.addClass("tile")
 		.text(value)
+		.attr("title", value + "x" + range)
 		.attr("id", id)
 		.data("range", range)
 		.data("value", value)
@@ -83,6 +85,7 @@ function createTile(width, height, value, range) {
 /* == EVENT HANDLERS == */
 
 function handleDragStart(event, ui) {
+	log("drag start");
 	$("#board td.spot").draggable("option", "accept", ".tile"); // reset all spots to accept all tiles
 }
 
@@ -119,26 +122,18 @@ function handleTileDoubleClick(event) {
 /* == ACTIONS -- */
 
 function editValue(tile) {
-	var oldValue = $(tile).data("value");
-	var oldRange = $(tile).data("range");
-	var oldName = $(tile).data("name");
-
-	var input = prompt("(value)x(range)x(name)", oldValue + "x" + oldRange + "x" + oldName);
+	var oldvalue = $(tile).data("value");
+	var input = prompt("New value", oldvalue);
 	if (input == null) return;
 
 	var value = input.split("x")[0] * 1;
-	var range = input.split("x")[1] * 1;
-	var name = input.split("x")[2];
-	if (isNaN(range)) range = oldRange;
 
 	$(tile).data("value", value).text(value);
-	$(tile).data("range", range);
-	$(tile).data("name", name).text(name.toUpperCase());
 
 	var spot = $(tile).data("spot");
 	if (spot != null) {
-		cleanupTile(spot, tile, oldValue, oldRange);
-		placeTile(spot, tile, value, range);
+		cleanupTile(spot, tile, oldvalue);
+		placeTile(spot, tile, value);
 	}
 
 }

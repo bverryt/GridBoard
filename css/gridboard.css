@@ -16,4 +16,4 @@
 /* stack */
 #stack { float: left; border: solid 1px #ccc; width: 440px;  padding: 10px; margin-left: 10px; }
 #stack .tile { background-color: #96917A; display: inline-block; border: solid 1px black; border-radius: 2px; margin: 0 5px 5px 0; }
-#stack .tile { text-align: center; color: #030; font-size: 10pt; }
+#stack .tile { text-align: center; color: #030; font-size: 10pt; cursor: default; }
