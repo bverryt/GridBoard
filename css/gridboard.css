@@ -2,17 +2,17 @@
 #area { margin: 10px; }
 
 /* shared styles */
-#board .spot , #board .spot div, .building { width: 20px; height: 20px; }
-#board .spot, #stack { border: solid 1px #ccc; }
+#board .tile , #board .tile div, .building { width: 20px; height: 20px; }
+#board .tile, #stack { border: solid 1px #ccc; }
 
 /* board */
 #board { border-collapse: collapse; float: left; }
 #board .row { margin: 0; padding: 0; }
-#board .spot { text-align: center;  padding: 0; }
-#board .spot div { color: #ccc; font-size: 8pt; overflow: hidden; }
-#board .spot.hovered { background-color: #ccc;}
-#board .spot.active { background-color: #ccc;}
-#board .spot.highlight { background-color: #f00;}
+#board .tile { text-align: center;  padding: 0; }
+#board .tile div { color: #ccc; font-size: 8pt; overflow: hidden; }
+#board .tile.hovered { background-color: #ccc;}
+#board .tile.active { background-color: #ccc;}
+#board .tile.highlight { background-color: #f00;}
 
 /* stack */
 #stack { float: left;  width: 440px;  padding: 10px; margin-left: 10px; }

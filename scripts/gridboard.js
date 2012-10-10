@@ -66,9 +66,9 @@ function createSpots(board, rows, cols) {
 	for (var y = 1; y <= rows; y++) {
 		var row = $("<tr/>").addClass("row").appendTo(board);
 		for (var x = 1; x <= cols; x++) {
-			
-			var spot = $("<td/>").addClass("spot").appendTo(row);
-			spot.droppable({
+
+			var tile = $("<td/>").addClass("tile").appendTo(row);
+			tile.droppable({
 				accept: ".building", tolerance: "pointer", hoverClass: "hovered",
 				over: handleSpotOver, drop: handleBuildingPlacement
 			})
@@ -98,32 +98,32 @@ function createBuilding(width, height, value, range) {
 /* EVENT HANDLERS */
 
 function handleDragStart(event, ui) {
-	$("#board td.spot").draggable("option", "accept", ".building"); // reset all spots to accept all buildings
+	$("#board td.tile").draggable("option", "accept", ".building"); // reset all tiles to accept all buildings
 }
 
 function handleSpotOver(event, ui) {
-	var spot = $(this);
+	var tile = $(this);
 	var building = ui.draggable;
-	if (!validateSpot(spot, building)) { // if invalid
+	if (!validateSpot(tile, building)) { // if invalid
 		var selector = ".building:not(#" + $(building).attr("id") + ")"; // don't accept the current building
-		spot.droppable("option", "accept", selector).removeClass("hovered");
+		tile.droppable("option", "accept", selector).removeClass("hovered");
 	}
 }
 
 function handleBuildingPlacement(event, ui) {
 	var building = ui.draggable;
-	var oldSpot = $(building).data("spot");
+	var oldSpot = $(building).data("tile");
 	var newSpot = $(this);
 
-	if (oldSpot != null) cleanupBuilding(oldSpot, building) // cleanup old spot
-	placeBuilding(newSpot, building); // place on new spot	
+	if (oldSpot != null) cleanupBuilding(oldSpot, building) // cleanup old tile
+	placeBuilding(newSpot, building); // place on new tile	
 	building.position({ of: $(this), my: "left top", at: "left top" });
 }
 
 function handleBuildingRestack(event, ui) {
 	var building = ui.draggable;
-	var oldSpot = $(building.data("spot"));
-	cleanupBuilding(oldSpot, building); // remove from old spot
+	var oldSpot = $(building.data("tile"));
+	cleanupBuilding(oldSpot, building); // remove from old tile
 }
 
 function handleBuildingEdit(event) {
@@ -152,21 +152,21 @@ function editValue(buildingEdit, building) {
 	$(building).data("name", newName);
 	if (newName != "") building.text(newName.toUpperCase())
 
-	var spot = $(building).data("spot");
-	if (spot != null) {
-		cleanupBuilding(spot, building, oldValue, oldRange);
-		placeBuilding(spot, building, newValue, newRange);
+	var tile = $(building).data("tile");
+	if (tile != null) {
+		cleanupBuilding(tile, building, oldValue, oldRange);
+		placeBuilding(tile, building, newValue, newRange);
 	}
 
 	$(buildingEdit).dialog("close");
 }
 
-function validateSpot(spot, building) {
+function validateSpot(tile, building) {
 	var width = $(building).data("width");
 	var height = $(building).data("height");
 	if (width == 1 && height == 1) return true;
 
-	var coords = getCoords(spot);
+	var coords = getCoords(tile);
 	if (coords.x + width - 1 > NUM_OF_COLS) return false; // don't allow overlap of right edge
 	if (coords.y + height - 1 > NUM_OF_ROWS) return false; // don't allow overlap of bottom edge
 
@@ -178,15 +178,15 @@ function validateSpot(spot, building) {
 	return true;
 }
 
-function placeBuilding(spot, building, value, range) {
-	processBuildingChange(spot, building, value, range, spotActivate, function (a, b) { return a + b; });
+function placeBuilding(tile, building, value, range) {
+	processBuildingChange(tile, building, value, range, tileActivate, function (a, b) { return a + b; });
 }
 
-function cleanupBuilding(spot, building, value, range) {
-	processBuildingChange(spot, building, value, range, spotDeactivate, function (a, b) { return a - b; });
+function cleanupBuilding(tile, building, value, range) {
+	processBuildingChange(tile, building, value, range, tileDeactivate, function (a, b) { return a - b; });
 }
 
-function processBuildingChange(spot, building, value, range, spotAction, valueCalc) {
+function processBuildingChange(tile, building, value, range, tileAction, valueCalc) {
 
 
 	var width = $(building).data("width");
@@ -194,36 +194,36 @@ function processBuildingChange(spot, building, value, range, spotAction, valueCa
 	if (value == null) value = $(building).data("value");
 	if (range == null) range = $(building).data("range");
 
-	// occupied spots = spots covered by the building itself
-	var occupiedSpots = getOccupiedSpots(spot, width, height);
-	$(occupiedSpots).each(function () { spotAction(spot, this, building); });
-	
-	// affected spots = spots within range
-	var affectedSpots = getAffectedSpots(spot, range, width, height);
+	// occupied tiles = tiles covered by the building itself
+	var occupiedSpots = getOccupiedSpots(tile, width, height);
+	$(occupiedSpots).each(function () { tileAction(tile, this, building); });
+
+	// affected tiles = tiles within range
+	var affectedSpots = getAffectedSpots(tile, range, width, height);
 	$(affectedSpots).each(function () { updateSpotValue(this, value, valueCalc); });
 }
 
-function updateSpotValue(spot, value, valueCalc) {
-	var coords = getCoords(spot);
-	var oldValue = $(spot).data("value");
+function updateSpotValue(tile, value, valueCalc) {
+	var coords = getCoords(tile);
+	var oldValue = $(tile).data("value");
 	if (oldValue == null) oldValue = 0;
 	var newValue = valueCalc(oldValue, value);
-	$(spot).data("value", newValue);
-	$(spot).empty();
-	if (newValue > 0) $("<div/>").appendTo(spot).text(newValue);
+	$(tile).data("value", newValue);
+	$(tile).empty();
+	if (newValue > 0) $("<div/>").appendTo(tile).text(newValue);
 }
 
-function spotDeactivate(originSpot, spot, building) {
-	$(building).data("spot", null);
-	$(spot).removeClass("active");
-	var coords = getCoords(spot);
+function tileDeactivate(originSpot, tile, building) {
+	$(building).data("tile", null);
+	$(tile).removeClass("active");
+	var coords = getCoords(tile);
 	lookup[coords.x][coords.y] = null;
 }
 
-function spotActivate(originSpot, spot, building) {
-	$(building).data("spot", originSpot);
-	$(spot).addClass("active");
-	var coords = getCoords(spot);
+function tileActivate(originSpot, tile, building) {
+	$(building).data("tile", originSpot);
+	$(tile).addClass("active");
+	var coords = getCoords(tile);
 	lookup[coords.x][coords.y] = building.attr("id");
 }
 
@@ -236,9 +236,9 @@ function writelog(message, p1, p2, p3, p4) {
 	console.log(logcounter++ + ": " + message);
 }
 
-function getCoords(spot) {
-	var row = $(spot).parent("tr");
-	var x = $(row).find(".spot").index(spot) + 1;
+function getCoords(tile) {
+	var row = $(tile).parent("tr");
+	var x = $(row).find(".tile").index(tile) + 1;
 	var y = $("#board tr").index(row) + 1;
 	return { x: x, y: y };
 }
