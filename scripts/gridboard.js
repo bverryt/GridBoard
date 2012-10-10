@@ -22,7 +22,7 @@ function init() {
 	initBuildingEdit();
 }
 
-function initBoard(board) {
+function initBoard() {
 	var board = $("#board");
 	createSpots(board, NUM_OF_ROWS, NUM_OF_COLS);
 }
