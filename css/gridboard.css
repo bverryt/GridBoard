@@ -1,19 +1,28 @@
 ﻿
 #area { margin: 10px; }
 
-/* tile size */
-#board .spot , #board .spot div, .tile { width: 20px; height: 20px; }
+/* shared styles */
+#board .spot , #board .spot div, .building { width: 20px; height: 20px; }
+#board .spot, #stack { border: solid 1px #ccc; }
 
 /* board */
 #board { border-collapse: collapse; float: left; }
 #board .row { margin: 0; padding: 0; }
-#board .spot { text-align: center;  border: solid 1px #ccc; padding: 0; }
+#board .spot { text-align: center;  padding: 0; }
 #board .spot div { color: #ccc; font-size: 8pt; overflow: hidden; }
 #board .spot.hovered { background-color: #ccc;}
 #board .spot.active { background-color: #ccc;}
 #board .spot.highlight { background-color: #f00;}
 
 /* stack */
-#stack { float: left; border: solid 1px #ccc; width: 440px;  padding: 10px; margin-left: 10px; }
-#stack .tile { background-color: #96917A; display: inline-block; border: solid 1px black; border-radius: 2px; margin: 0 5px 5px 0; }
-#stack .tile { text-align: center; color: #030; font-size: 10pt; cursor: default; }
+#stack { float: left;  width: 440px;  padding: 10px; margin-left: 10px; }
+#stack .building { background-color: #96917A; display: inline-block; border: solid 1px black; border-radius: 2px; margin: 0 5px 5px 0; }
+#stack .building { text-align: center; color: #030; font-size: 10pt; cursor: default; }
+
+/* building edit form */
+div.ui-dialog { font-size: 9pt; }
+div.ui-dialog-buttonpane { border: 0 };
+form#buildingEdit { float: left; }
+form#buildingEdit label { display: inline-block; width: 80px; }
+form#buildingEdit label:after { content:":"  }
+form#buildingEdit input[type=text] {  border: solid 1px #ccc;  }
