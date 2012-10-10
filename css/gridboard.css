@@ -3,7 +3,7 @@
 
 /* shared styles */
 #board .tile , #board .tile div, .building { width: 20px; height: 20px; }
-#board .tile, #stack { border: solid 1px #ccc; }
+#board .tile, #inventory { border: solid 1px #ccc; }
 
 /* board */
 #board { border-collapse: collapse; float: left; }
@@ -14,10 +14,10 @@
 #board .tile.active { background-color: #ccc;}
 #board .tile.highlight { background-color: #f00;}
 
-/* stack */
-#stack { float: left;  width: 440px;  padding: 10px; margin-left: 10px; }
-#stack .building { background-color: #96917A; display: inline-block; border: solid 1px black; border-radius: 2px; margin: 0 5px 5px 0; }
-#stack .building { text-align: center; color: #030; font-size: 10pt; cursor: default; }
+/* inventory */
+#inventory { float: left;  width: 440px;  padding: 10px; margin-left: 10px; }
+#inventory .building { background-color: #96917A; display: inline-block; border: solid 1px black; border-radius: 2px; margin: 0 5px 5px 0; }
+#inventory .building { text-align: center; color: #030; font-size: 10pt; cursor: default; }
 
 /* building edit form */
 div.ui-dialog { font-size: 9pt; }

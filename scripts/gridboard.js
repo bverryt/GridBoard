@@ -1,7 +1,7 @@
 ﻿// TODO: add residential buildings ('receivers')
 // TODO: add buildings as json
-// TODO: allow save/load of board + stack
-// TODO: let user add items to stack
+// TODO: allow save/load of board + inventory
+// TODO: let user add items to inventory
 // TODO: use different colours (decorations/attractions)
 // TODO: re-write as a generic boardgame plugin
 
@@ -18,7 +18,7 @@ $(init);
 function init() {
 	$("body").disableSelection();
 	initBoard();
-	initStack();
+	initInventory();
 	initBuildingEdit();
 }
 
@@ -27,26 +27,26 @@ function initBoard(board) {
 	createSpots(board, NUM_OF_ROWS, NUM_OF_COLS);
 }
 
-function initStack() {
+function initInventory() {
 	var board = $("#board");
-	var stack = $("#stack");
+	var inventory = $("#inventory");
 	var br = "<br/>";
 
 	function repeat(times, fn) { for (var i = 0; i < times; i++) fn(); }
-	repeat(15, function () { createBuilding(1, 1, 5, 2); }); stack.append(br);
+	repeat(15, function () { createBuilding(1, 1, 5, 2); }); inventory.append(br);
 	repeat(5, function () { createBuilding(2, 2, 10, 2); });
 	repeat(2, function () { createBuilding(3, 2, 10, 2); });
-	repeat(2, function () { createBuilding(1, 2, 10, 2); }); stack.append(br);
+	repeat(2, function () { createBuilding(1, 2, 10, 2); }); inventory.append(br);
 	repeat(3, function () { createBuilding(3, 3, 25, 3); });
-	repeat(3, function () { createBuilding(2, 3, 25, 3); }); stack.append(br);
-	repeat(2, function () { createBuilding(4, 4, 50, 3); }); stack.append(br);
+	repeat(3, function () { createBuilding(2, 3, 25, 3); }); inventory.append(br);
+	repeat(2, function () { createBuilding(4, 4, 50, 3); }); inventory.append(br);
 
-	stack.droppable({ drop: handleBuildingRestack, tolerance: 'fit' });
-	stack.height(board.height() - 22);
+	inventory.droppable({ drop: handleBuildingRestack, tolerance: 'fit' });
+	inventory.height(board.height() - 22);
 }
 
 function initBuildingEdit() {
-	var buildingEdit = $("<form/>").attr("id", "buildingEdit").appendTo("#stack");
+	var buildingEdit = $("<form/>").attr("id", "buildingEdit").appendTo("#inventory");
 	var valueEdit = $("<input/>").attr("type", "text").attr("name", "value");
 	var rangeEdit = $("<input/>").attr("type", "text").attr("name", "range");
 	var nameEdit = $("<input/>").attr("type", "text").attr("name", "name");
@@ -81,13 +81,13 @@ function createSpots(board, rows, cols) {
 }
 
 function createBuilding(width, height, value, range) {
-	var stack = $("#stack");
-	var id = "building" + (stack.find(".building").length + 1);
+	var inventory = $("#inventory");
+	var id = "building" + (inventory.find(".building").length + 1);
 
-	var building = $("<div/>").addClass("building").attr("id", id).appendTo(stack);
+	var building = $("<div/>").addClass("building").attr("id", id).appendTo(inventory);
 	building.text(value).attr("title", value + "x" + range);
 	building.data("range", range).data("value", value).data("name", "").data("width", width).data("height", height)
-	building.draggable({ start: handleDragStart, revert: "invalid", stack: ".building", cursorAt: { left: 5, top: 5} });
+	building.draggable({ start: handleDragStart, revert: "invalid", inventory: ".building", cursorAt: { left: 5, top: 5} });
 	building.dblclick(handleBuildingEdit);
 
 	building.width(building.width() * width + (width - 1));
