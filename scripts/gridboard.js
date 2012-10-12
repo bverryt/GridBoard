@@ -3,13 +3,13 @@
 // TODO: allow save/load of board + inventory
 // TODO: let user add items to inventory
 // TODO: use different colours (decorations/attractions)
-// TODO: re-write as a generic boardgame plugin
+// TODO: re-write as a generic board game plugin
 
 /* CONSTANTS */
 var NUM_OF_ROWS = 20, NUM_OF_COLS = 30;
 
 /* GLOBALS */
-var lookup = new Array(), logcounter = 1;
+var lookup = [], logcounter = 1;
 
 /* INIT */
 
@@ -47,19 +47,19 @@ function initInventory() {
 
 function initBuildingEdit() {
 	var buildingEdit = $("<form/>").attr("id", "buildingEdit").appendTo("#inventory");
-	var valueEdit = $("<input/>").attr("type", "text").attr("name", "value");
-	var rangeEdit = $("<input/>").attr("type", "text").attr("name", "range");
-	var nameEdit = $("<input/>").attr("type", "text").attr("name", "name");
-
-	buildingEdit.append("<label>value</label>").append(valueEdit).append("<br/>")
-	buildingEdit.append("<label>range</label>").append(rangeEdit).append("<br/>")
-	buildingEdit.append("<label>name</label>").append(nameEdit).append("<br/>")
+    buildingEdit.append("<label>value</label>").append(createTextInput("value")).append("<br/>");
+	buildingEdit.append("<label>range</label>").append(createTextInput("range")).append("<br/>");
+	buildingEdit.append("<label>name</label>").append(createTextInput("name")).append("<br/>");
 
 	buildingEdit.dialog({
 		height: 120	, width: 250,
 		autoOpen: false, modal: true, resizable: false,
 		title: "edit building"
 	});
+}
+
+function createTextInput(name){
+    return $("<input/>").attr("type", "text").attr("name", name);
 }
 
 function createSpots(board, rows, cols) {
@@ -69,9 +69,9 @@ function createSpots(board, rows, cols) {
 
 			var tile = $("<td/>").addClass("tile").appendTo(row);
 			tile.droppable({
-				accept: ".building", tolerance: "pointer", hoverClass: "hovered",
-				over: handleSpotOver, drop: handleBuildingPlacement
-			})
+                accept:".building", tolerance:"pointer", hoverClass:"hovered",
+                over:handleSpotOver, drop:handleBuildingPlacement
+            });
 
 			if (lookup == null) lookup = new Array(NUM_OF_COLS);
 			if (lookup[x] == null) lookup[x] = new Array(NUM_OF_ROWS);
@@ -86,7 +86,7 @@ function createBuilding(width, height, value, range) {
 
 	var building = $("<div/>").addClass("building").attr("id", id).appendTo(inventory);
 	building.text(value).attr("title", value + "x" + range);
-	building.data("range", range).data("value", value).data("name", "").data("width", width).data("height", height)
+	building.data("range", range).data("value", value).data("name", "").data("width", width).data("height", height);
 	building.draggable({ start: handleDragStart, revert: "invalid", inventory: ".building", cursorAt: { left: 5, top: 5} });
 	building.dblclick(handleBuildingEdit);
 
@@ -98,7 +98,7 @@ function createBuilding(width, height, value, range) {
 /* EVENT HANDLERS */
 
 function handleDragStart(event, ui) {
-	$("#board td.tile").draggable("option", "accept", ".building"); // reset all tiles to accept all buildings
+    $("#board").find("td.tile").draggable("option", "accept", ".building"); // reset all tiles to accept all buildings
 }
 
 function handleSpotOver(event, ui) {
@@ -115,7 +115,7 @@ function handleBuildingPlacement(event, ui) {
 	var oldSpot = $(building).data("tile");
 	var newSpot = $(this);
 
-	if (oldSpot != null) cleanupBuilding(oldSpot, building) // cleanup old tile
+	if (oldSpot != null) cleanupBuilding(oldSpot, building); // cleanup old tile
 	placeBuilding(newSpot, building); // place on new tile	
 	building.position({ of: $(this), my: "left top", at: "left top" });
 }
@@ -128,7 +128,7 @@ function handleBuildingRestack(event, ui) {
 
 function handleBuildingEdit(event) {
 	var building = $(this);
-	var buildingEdit = $("#buildingEdit")
+	var buildingEdit = $("#buildingEdit");
 
 	buildingEdit.enter(function () { editValue(buildingEdit, building); });
 	buildingEdit.find("input[name=value]").val($(building).data("value")).focus(function () { this.select(); });
@@ -141,16 +141,16 @@ function handleBuildingEdit(event) {
 
 function editValue(buildingEdit, building) {
 	var oldValue = $(building).data("value");
-	var newValue = buildingEdit.find("input[name=value]").val() * 1;
+	var newValue = parseInt(buildingEdit.find("input[name=value]").val());
 	$(building).data("value", newValue).text(newValue);
 
 	var oldRange = $(building).data("range");
-	var newRange = buildingEdit.find("input[name=range]").val() * 1;
+	var newRange = parseInt(buildingEdit.find("input[name=range]").val());
 	$(building).data("range", newRange);
 
 	var newName = buildingEdit.find("input[name=name]").val();
 	$(building).data("name", newName);
-	if (newName != "") building.text(newName.toUpperCase())
+	if (newName != "") building.text(newName.toUpperCase());
 
 	var tile = $(building).data("tile");
 	if (tile != null) {
@@ -231,15 +231,16 @@ function tileActivate(originSpot, tile, building) {
 
 
 
-function writelog(message, p1, p2, p3, p4) {
-	var message = message.replace("$1",p1).replace("$2",p2).replace("$3",p3).replace("$4",p4);
-	console.log(logcounter++ + ": " + message);
+//noinspection JSUnusedGlobalSymbols
+function writeLog(message, p1, p2, p3, p4) {
+	var log = message.replace("$1",p1).replace("$2",p2).replace("$3",p3).replace("$4",p4);
+	console.log(logcounter++ + ": " + log);
 }
 
 function getCoords(tile) {
 	var row = $(tile).parent("tr");
 	var x = $(row).find(".tile").index(tile) + 1;
-	var y = $("#board tr").index(row) + 1;
+	var y = $("#board").find("tr").index(row) + 1;
 	return { x: x, y: y };
 }
 
@@ -247,7 +248,7 @@ function getOccupiedSpots(originSpot, width, height) {
 	var occupiedSpots = [];
 	var origin = getCoords(originSpot);
 	// TODO: find a better occupied/affected test than scanning the entire board
-	$("#board td").each(function () {
+	$("#board").find("td").each(function () {
 		var coords = getCoords(this);
 		if (coords.x >= origin.x && coords.x < origin.x + width)
 			if (coords.y >= origin.y && coords.y < origin.y + height)
@@ -259,7 +260,7 @@ function getOccupiedSpots(originSpot, width, height) {
 function getAffectedSpots(originSpot, range, width, height) {
 	var affectedSpots = [];
 	var origin = getCoords(originSpot);
-	$("#board td").each(function () {
+	$("#board").find("td").each(function () {
 		var coords = getCoords(this);
 		if (coords.x >= origin.x - range && coords.x < origin.x + range + width)
 			if (coords.y >= origin.y - range && coords.y < origin.y + range + height) 

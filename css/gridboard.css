@@ -21,7 +21,7 @@
 
 /* building edit form */
 div.ui-dialog { font-size: 9pt; }
-div.ui-dialog-buttonpane { border: 0 };
+div.ui-dialog-buttonpane { border: 0; }
 form#buildingEdit { float: left; }
 form#buildingEdit label { display: inline-block; width: 80px; }
 form#buildingEdit label:after { content:":"  }
