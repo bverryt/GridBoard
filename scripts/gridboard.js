@@ -11,7 +11,9 @@
 var NUM_OF_ROWS = 20, NUM_OF_COLS = 30; TILE_SIZE = 20;
 
 /* GLOBALS */
-var tileLookup = [], lookup2 = [], logCounter = 1;
+var buildingLookup = [], logCounter = 1;
+
+
 
 
 $(init);
@@ -30,7 +32,9 @@ function initBoard() {
     for (var y = 1; y <= NUM_OF_ROWS; y++) {
         var row = $("<tr/>").addClass("row").appendTo(board);
         for (var x = 1; x <= NUM_OF_COLS; x++) {
-            createTile(x, y).appendTo(row);
+            var coords = new Coordinates(x, y);
+            var tile = createTile(x, y).appendTo(row);
+            buildingLookup[coords] = null;
         }
     }
 }
@@ -81,19 +85,15 @@ function initBuildingEdit() {
 
 function createTile(x, y) {
     var tile = $("<td/>").addClass("tile");
-    var tileId = "tile_x_y".replace("x",x).replace("y",y);
+    var coords = new Coordinates(x, y);
 
     tile.width(TILE_SIZE).height(TILE_SIZE);
-    tile.attr("id", tileId).data("bonus", 0);
+    tile.data("coords", coords).data("bonus", 0);
 
     tile.droppable({
         accept:".building", tolerance:"pointer", hoverClass:"hovered",
         over:handleTileOver, drop:handleBuildingPlacement
     });
-
-    if (tileLookup == null) tileLookup = new Array(NUM_OF_COLS);
-    if (tileLookup[x] == null) tileLookup[x] = new Array(NUM_OF_ROWS);
-    tileLookup[x][y] = null;
 
     return tile;
 }
@@ -161,10 +161,10 @@ function handleBuildingPlacement(event, ui) {
 
 function handleBuildingRestack(event, ui) {
     // handle the placement of a building back into the inventory
-
 	var building = ui.draggable;
 	var oldTile = $(building.data("tile"));
-	cleanupBuilding(oldTile, building); // remove from old tile
+    if (oldTile != null) cleanupBuilding(oldTile, building); // remove from old tile
+    // TODO: reset residential value to 0 on restack
 }
 
 function handleBuildingEdit(event) {
@@ -186,23 +186,19 @@ function handleBuildingEdit(event) {
 function editBuilding(buildingEdit, building) {
     // apply the changes entered via the buildingEdit dialog.
 
-	var oldBonus = $(building).data("bonus");
+    var tile = $(building).data("tile");
+    if (tile != null) cleanupBuilding(tile, building);
+
 	var newBonus = parseInt(buildingEdit.find("input[name=bonus]").val());
-	$(building).data("bonus", newBonus).text(newBonus);
-
-	var oldRange = $(building).data("range");
 	var newRange = parseInt(buildingEdit.find("input[name=range]").val());
-	$(building).data("range", newRange);
+    var newName = buildingEdit.find("input[name=name]").val();
 
-	var newName = buildingEdit.find("input[name=name]").val();
+    $(building).data("bonus", newBonus).text(newBonus);
+	$(building).data("range", newRange);
 	$(building).data("name", newName);
 	if (newName != "") building.text(newName.toUpperCase());
 
-	var tile = $(building).data("tile");
-	if (tile != null) {
-		cleanupBuilding(tile, building, oldBonus, oldRange);
-		placeBuilding(tile, building, newBonus, newRange);
-	}
+	if (tile != null)  placeBuilding(tile, building);
 
 	$(buildingEdit).dialog("close");
 }
@@ -214,67 +210,55 @@ function validateTile(tile, building) {
 	var height = $(building).data("height");
 	if (width == 1 && height == 1) return true;
 
-	var coords = getCoords(tile);
-	if (coords.x + width - 1 > NUM_OF_COLS) return false; // don't allow overlap of right edge
-	if (coords.y + height - 1 > NUM_OF_ROWS) return false; // don't allow overlap of bottom edge
-
-    var tileId = $(tile).attr("id");
+	var topLeft = coordsFromTile(tile);
+	if (topLeft.x + width - 1 > NUM_OF_COLS) return false; // don't allow overlap of right edge
+	if (topLeft.y + height - 1 > NUM_OF_ROWS) return false; // don't allow overlap of bottom edge
 
 	var buildingId = $(building).attr("id");
-	for (var x = coords.x; x < coords.x + width; x++)
-		for (var y = coords.y; y < coords.y + height; y++)
+	for (var x = topLeft.x; x < topLeft.x + width; x++)
+		for (var y = topLeft.y; y < topLeft.y + height; y++)
         {
-            // if (tileLookup[x][y] != null && tileLookup[x][y] != id) return false;
-            writeLog("check $1 = $2", tileId, lookup2[tileId]);
-            if (lookup2[tileId] != null && lookup2[tileId] != buildingId) return false;
+            var coords = new Coordinates(x, y);
+            if (buildingLookup[coords] != null && buildingLookup[coords] != buildingId) return false;
         }
 
 	return true;
 }
 
-function placeBuilding(tile, building, bonus, range) {
-	processBuildingPlacement(tile, building, bonus, range, tileActivate, function (a, b) { return a + b; });
+function placeBuilding(tile, building) {
+	processBuilding(tile, building, tileActivate, function (a, b) { return a + b; });
 }
 
-function cleanupBuilding(tile, building, bonus, range) {
-	processBuildingPlacement(tile, building, bonus, range, tileDeactivate, function (a, b) { return a - b; });
+function cleanupBuilding(tile, building) {
+	processBuilding(tile, building, tileDeactivate, function (a, b) { return a - b; });
 }
 
-function processBuildingPlacement(tile, building, bonus, range, tileActivation, bonusCalc) {
-	var width = $(building).data("width");
-	var height = $(building).data("height");
-	if (bonus == null) bonus = $(building).data("bonus");
-	if (range == null) range = $(building).data("range");
+function processBuilding(tile, building, tileActivation, bonusCalc) {
 
 	// occupied tiles = tiles covered by the building itself
-	var occupiedTiles = getOccupiedTiles(tile, width, height);
-    var maxBonus = 0;
+	var occupiedTiles = getOccupiedTiles(tile, building);
+    var receivedBonus = 0;
 	$(occupiedTiles).each(function () {
         var occupiedTile = $(this);
         tileActivation(tile, occupiedTile, building);
-        maxBonus = Math.max(maxBonus, occupiedTile.data("bonus"));
+        receivedBonus = Math.max(receivedBonus, occupiedTile.data("bonus"));
     });
 
     // update value of the placed building, if residential
-    if (building.hasClass("residential")) building.data("value", maxBonus).text(maxBonus);
+    if (building.hasClass("residential")) building.data("value", receivedBonus).text(receivedBonus);
 
 	// affected tiles = tiles within range
-	var affectedTiles = getAffectedTiles(tile, range, width, height);
+	var affectedTiles = getAffectedTiles(tile, building);
+    var bonus = $(building).data("bonus");
 	$(affectedTiles).each(function () {
         var affectedTile = $(this);
         updateTileBonus(affectedTile, bonus, bonusCalc);
-
-
-    });
-
-
-
-
+   });
 
 }
 
 function updateTileBonus(tile, bonus, bonusCalc) {
-	var coords = getCoords(tile);
+	var coords = coordsFromTile(tile);
 	var oldBonus = $(tile).data("bonus");
 	if (oldBonus == null) oldBonus = 0;
 	var newBonus = bonusCalc(oldBonus, bonus);
@@ -286,31 +270,39 @@ function updateTileBonus(tile, bonus, bonusCalc) {
 function tileDeactivate(originTile, tile, building) {
 	$(building).data("tile", null);
 	$(tile).removeClass("active");
-	var coords = getCoords(tile);
-	tileLookup[coords.x][coords.y] = null;
-
-    var tileId = $(tile).attr("id");
-    lookup2[tileId] = null;
-    writeLog("lookup $1 = null", tileId);
+	var coords = coordsFromTile(tile);
+    buildingLookup[coords] = null;
 }
 
 function tileActivate(originTile, tile, building) {
 	$(building).data("tile", originTile);
 	$(tile).addClass("active");
-	var coords = getCoords(tile);
-	tileLookup[coords.x][coords.y] = building.attr("id");
-
-    var tileId = $(tile).attr("id");
-    lookup2[tileId] =  building.attr("id");
-    writeLog("lookup $1 = $2", tileId, building.attr("id"));
+	var coords = coordsFromTile(tile);
+    buildingLookup[coords] =  building.attr("id");
 }
 //</editor-fold>
 
+
+//<editor-fold desc="COORDINATES">
+
+function Coordinates(x,y) { this.x = x;  this.y = y;}
+Coordinates.prototype.toString = function() { return this.x + "_" + this.y; };
+
+function coordsFromTile(tile) {
+    var coords = $(tile).data("coords");
+    // writeLog("coordsFromTile = $1:$2 ($3)", coords.x, coords.y, arguments.callee.caller.name);
+    return coords;
+}
+//</editor-fold>
+
+
 //<editor-fold desc="HELPERS">
 
+
+
 //noinspection JSUnusedGlobalSymbols
-function writeLog(message, p1, p2, p3, p4) {
-	var log = message.replace("$1",p1).replace("$2",p2).replace("$3",p3).replace("$4",p4);
+function writeLog(message, p1, p2, p3, p4, p5) {
+	var log = message.replace("$1",p1).replace("$2",p2).replace("$3",p3).replace("$4",p4).replace("$5", p5);
 	console.log(logCounter++ + ": " + log);
 }
 
@@ -318,19 +310,15 @@ function createTextInput(name){
     return $("<input/>").attr("type", "text").attr("name", name);
 }
 
-function getCoords(tile) {
-	var row = $(tile).parent("tr");
-	var x = $(row).find(".tile").index(tile) + 1;
-	var y = $("#board").find("tr").index(row) + 1;
-	return { x: x, y: y };
-}
+function getOccupiedTiles(originTile, building) {
+    var occupiedTiles = [];
+    var width = $(building).data("width");
+    var height = $(building).data("height");
 
-function getOccupiedTiles(originTile, width, height) {
-	var occupiedTiles = [];
-	var origin = getCoords(originTile);
+	var origin = coordsFromTile(originTile);
 	// TODO: find a better occupied/affected test than scanning the entire board
 	$("#board").find("td").each(function () {
-		var coords = getCoords(this);
+		var coords = coordsFromTile(this);
 		if (coords.x >= origin.x && coords.x < origin.x + width)
 			if (coords.y >= origin.y && coords.y < origin.y + height)
 				occupiedTiles.push(this);
@@ -338,11 +326,15 @@ function getOccupiedTiles(originTile, width, height) {
 	return occupiedTiles;
 }
 
-function getAffectedTiles(originTile, range, width, height) {
-	var affectedTiles = [];
-	var origin = getCoords(originTile);
+function getAffectedTiles(originTile, building) {
+    var affectedTiles = [];
+    var width = $(building).data("width");
+    var height = $(building).data("height");
+    var range = $(building).data("range");
+
+	var origin = coordsFromTile(originTile);
 	$("#board").find("td").each(function () {
-		var coords = getCoords(this);
+		var coords = coordsFromTile(this);
 		if (coords.x >= origin.x - range && coords.x < origin.x + range + width)
 			if (coords.y >= origin.y - range && coords.y < origin.y + range + height) 
 				affectedTiles.push(this);
