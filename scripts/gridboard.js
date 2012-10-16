@@ -13,12 +13,9 @@ var NUM_OF_ROWS = 20, NUM_OF_COLS = 30; TILE_SIZE = 20;
 /* GLOBALS */
 var buildingLookup = [], logCounter = 1;
 
-
-
+//<editor-fold desc="INIT">
 
 $(init);
-
-//<editor-fold desc="INIT">
 
 function init() {
 	$("body").disableSelection();
@@ -154,8 +151,8 @@ function handleBuildingPlacement(event, ui) {
 	var oldTile = $(building).data("tile");
 	var newTile = $(this);
 
-	if (oldTile != null) cleanupBuilding(oldTile, building); // cleanup old tile
-	placeBuilding(newTile, building); // place on new tile
+	if (oldTile != null) cleanup(oldTile, building); // cleanup old tile
+	place(newTile, building); // place on new tile
 	building.position({ of: $(this), my: "left top", at: "left top" });
 }
 
@@ -163,7 +160,7 @@ function handleBuildingRestack(event, ui) {
     // handle the placement of a building back into the inventory
 	var building = ui.draggable;
 	var oldTile = $(building.data("tile"));
-    if (oldTile != null) cleanupBuilding(oldTile, building); // remove from old tile
+    if (oldTile != null) cleanup(oldTile, building); // remove from old tile
     // TODO: reset residential value to 0 on restack
 }
 
@@ -187,7 +184,7 @@ function editBuilding(buildingEdit, building) {
     // apply the changes entered via the buildingEdit dialog.
 
     var tile = $(building).data("tile");
-    if (tile != null) cleanupBuilding(tile, building);
+    if (tile != null) cleanup(tile, building);
 
 	var newBonus = parseInt(buildingEdit.find("input[name=bonus]").val());
 	var newRange = parseInt(buildingEdit.find("input[name=range]").val());
@@ -198,7 +195,7 @@ function editBuilding(buildingEdit, building) {
 	$(building).data("name", newName);
 	if (newName != "") building.text(newName.toUpperCase());
 
-	if (tile != null)  placeBuilding(tile, building);
+	if (tile != null)  place(tile, building);
 
 	$(buildingEdit).dialog("close");
 }
@@ -225,36 +222,44 @@ function validateTile(tile, building) {
 	return true;
 }
 
-function placeBuilding(tile, building) {
-	processBuilding(tile, building, tileActivate, function (a, b) { return a + b; });
-}
+function place(tile, building) {
+    var occupiedTiles = getOccupiedTiles(tile, building);
+    var affectedTiles = getAffectedTiles(tile, building);
+    var maxBonus = 0;
 
-function cleanupBuilding(tile, building) {
-	processBuilding(tile, building, tileDeactivate, function (a, b) { return a - b; });
-}
-
-function processBuilding(tile, building, tileActivation, bonusCalc) {
-
-	// occupied tiles = tiles covered by the building itself
-	var occupiedTiles = getOccupiedTiles(tile, building);
-    var receivedBonus = 0;
-	$(occupiedTiles).each(function () {
-        var occupiedTile = $(this);
-        tileActivation(tile, occupiedTile, building);
-        receivedBonus = Math.max(receivedBonus, occupiedTile.data("bonus"));
+    $(occupiedTiles).each(function () {
+        $(building).data("tile", tile);
+        $(this).addClass("active");
+        var coords = coordsFromTile(this);
+        buildingLookup[coords] = building.attr("id");
+        maxBonus = Math.max(maxBonus, $(this).data("bonus"));
     });
 
-    // update value of the placed building, if residential
-    if (building.hasClass("residential")) building.data("value", receivedBonus).text(receivedBonus);
+    // TODO: use percentage value for residential calculation. Don't discriminate - non-residential will be 0%
+    if (building.hasClass("residential")) building.data("value", maxBonus).text(maxBonus);
 
-	// affected tiles = tiles within range
-	var affectedTiles = getAffectedTiles(tile, building);
     var bonus = $(building).data("bonus");
-	$(affectedTiles).each(function () {
-        var affectedTile = $(this);
-        updateTileBonus(affectedTile, bonus, bonusCalc);
-   });
+    $(affectedTiles).each(function () {
+        updateTileBonus(this, bonus, function (a, b) { return a + b; });
+    });
+}
 
+function cleanup(tile, building) {
+    var occupiedTiles = getOccupiedTiles(tile, building);
+    var affectedTiles = getAffectedTiles(tile, building);
+
+    $(occupiedTiles).each(function () {
+        $(building).data("tile", null);
+        $(this).removeClass("active");
+        var coords = coordsFromTile($(this));
+        buildingLookup[coords] = null;
+    });
+
+
+    var bonus = $(building).data("bonus");
+    $(affectedTiles).each(function () {
+        updateTileBonus(this, bonus, function (a, b) { return a - b; });
+    });
 }
 
 function updateTileBonus(tile, bonus, bonusCalc) {
@@ -267,19 +272,9 @@ function updateTileBonus(tile, bonus, bonusCalc) {
 	if (newBonus > 0) $("<div/>").appendTo(tile).text(newBonus);
 }
 
-function tileDeactivate(originTile, tile, building) {
-	$(building).data("tile", null);
-	$(tile).removeClass("active");
-	var coords = coordsFromTile(tile);
-    buildingLookup[coords] = null;
-}
 
-function tileActivate(originTile, tile, building) {
-	$(building).data("tile", originTile);
-	$(tile).addClass("active");
-	var coords = coordsFromTile(tile);
-    buildingLookup[coords] =  building.attr("id");
-}
+
+
 //</editor-fold>
 
 
