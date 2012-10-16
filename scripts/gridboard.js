@@ -51,16 +51,17 @@ function initInventory() {
 }
 
 function appendBuildings(amount, plan) {
+    // add a set amount of buildings, make make sure each building has a unique id
     var inventory = $("#inventory");
     for (var i = 0; i < amount; i++) {
             var building = createBuilding(plan);
             var id = "building" + (inventory.find(".building").length + 1);
-            building.attr("id", id);
-            building.appendTo(inventory);
+            building.attr("id", id).appendTo(inventory);
     }
 }
 
 function initBuildingEdit() {
+    // initialize the dialog that edits buildings
 	var buildingEdit = $("<form/>").attr("id", "buildingEdit").appendTo("#inventory");
     buildingEdit.append("<label>bonus</label>").append(createTextInput("bonus")).append("<br/>");
     buildingEdit.append("<label>range</label>").append(createTextInput("range")).append("<br/>");
@@ -130,6 +131,8 @@ function handleDragStart(event, ui) {
 }
 
 function handleTileOver(event, ui) {
+    // handle the movement of a building over the board. Trigger validation.
+
 	var tile = $(this);
 	var building = ui.draggable;
 	if (!validateTile(tile, building)) { // if invalid
@@ -139,6 +142,8 @@ function handleTileOver(event, ui) {
 }
 
 function handleBuildingPlacement(event, ui) {
+    // handle the placement of a building on a board tile
+
 	var building = ui.draggable;
 	var oldTile = $(building).data("tile");
 	var newTile = $(this);
@@ -149,15 +154,18 @@ function handleBuildingPlacement(event, ui) {
 }
 
 function handleBuildingRestack(event, ui) {
+    // handle the placement of a building back into the inventory
+
 	var building = ui.draggable;
 	var oldTile = $(building.data("tile"));
 	cleanupBuilding(oldTile, building); // remove from old tile
 }
 
 function handleBuildingEdit(event) {
+    // set up the buildingEdit dialog for a specific building
+
 	var building = $(this);
 	var buildingEdit = $("#buildingEdit");
-
 	buildingEdit.enter(function () { editBuilding(buildingEdit, building); });
 	buildingEdit.find("input[name=bonus]").val($(building).data("bonus")).focus(function () { this.select(); });
 	buildingEdit.find("input[name=range]").val($(building).data("range"));
@@ -170,6 +178,8 @@ function handleBuildingEdit(event) {
 //<editor-fold desc="ACTIONS">
 
 function editBuilding(buildingEdit, building) {
+    // apply the changes entered via the buildingEdit dialog.
+
 	var oldBonus = $(building).data("bonus");
 	var newBonus = parseInt(buildingEdit.find("input[name=bonus]").val());
 	$(building).data("bonus", newBonus).text(newBonus);
@@ -192,6 +202,8 @@ function editBuilding(buildingEdit, building) {
 }
 
 function validateTile(tile, building) {
+    // check if building is placeable on a certain tile. Check for edges and overlap.
+
 	var width = $(building).data("width");
 	var height = $(building).data("height");
 	if (width == 1 && height == 1) return true;
