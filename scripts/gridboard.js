@@ -169,10 +169,13 @@ function handleBuildingEdit(event) {
 
 	var building = $(this);
 	var buildingEdit = $("#buildingEdit");
-	buildingEdit.enter(function () { editBuilding(buildingEdit, building); });
+    // init input default values
 	buildingEdit.find("input[name=bonus]").val($(building).data("bonus")).focus(function () { this.select(); });
 	buildingEdit.find("input[name=range]").val($(building).data("range"));
 	buildingEdit.find("input[name=name]").val($(building).data("name"));
+    // bind save
+    buildingEdit.enter(function () { saveBuildingEdits(buildingEdit, building); });
+    // open the dialog
 	buildingEdit.dialog("open");
 }
 
@@ -180,7 +183,7 @@ function handleBuildingEdit(event) {
 
 //<editor-fold desc="ACTIONS">
 
-function editBuilding(buildingEdit, building) {
+function saveBuildingEdits(buildingEdit, building) {
     // apply the changes entered via the buildingEdit dialog.
 
     var tile = $(building).data("tile");
