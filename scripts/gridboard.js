@@ -1,16 +1,18 @@
-﻿// TODO: use prototyping on the building plans
-// TODO: optimize the .each() calls in getOccupiedTiles/getAffectedTiles
+﻿// TODO: optimize the .each() calls in getOccupiedTiles/getAffectedTiles
 // TODO: add residential buildings ('receivers')
 // TODO: allow save/load of board + inventory
 // TODO: let user add items to inventory
 // TODO: use different colours (decorations/attractions)
 // TODO: re-write as a generic board game plugin
+// TODO: stop storing a building's location in data("tile")
+// TODO: use prototyping for the building plans
 
 /* CONSTANTS */
 var NUM_OF_ROWS = 20, NUM_OF_COLS = 30; TILE_SIZE = 20;
 
 /* GLOBALS */
-var tileLookup = [], logCounter = 1;
+var tileLookup = [], lookup2 = [], logCounter = 1;
+
 
 $(init);
 
@@ -79,7 +81,10 @@ function initBuildingEdit() {
 
 function createTile(x, y) {
     var tile = $("<td/>").addClass("tile");
+    var tileId = "tile_x_y".replace("x",x).replace("y",y);
+
     tile.width(TILE_SIZE).height(TILE_SIZE);
+    tile.attr("id", tileId).data("bonus", 0);
 
     tile.droppable({
         accept:".building", tolerance:"pointer", hoverClass:"hovered",
@@ -89,6 +94,7 @@ function createTile(x, y) {
     if (tileLookup == null) tileLookup = new Array(NUM_OF_COLS);
     if (tileLookup[x] == null) tileLookup[x] = new Array(NUM_OF_ROWS);
     tileLookup[x][y] = null;
+
     return tile;
 }
 
@@ -212,10 +218,16 @@ function validateTile(tile, building) {
 	if (coords.x + width - 1 > NUM_OF_COLS) return false; // don't allow overlap of right edge
 	if (coords.y + height - 1 > NUM_OF_ROWS) return false; // don't allow overlap of bottom edge
 
-	var id = $(building).attr("id");
+    var tileId = $(tile).attr("id");
+
+	var buildingId = $(building).attr("id");
 	for (var x = coords.x; x < coords.x + width; x++)
-		for (var y = coords.y; y < coords.y + height; y++) 
-			if (tileLookup[x][y] != null && tileLookup[x][y] != id) return false;
+		for (var y = coords.y; y < coords.y + height; y++)
+        {
+            // if (tileLookup[x][y] != null && tileLookup[x][y] != id) return false;
+            writeLog("check $1 = $2", tileId, lookup2[tileId]);
+            if (lookup2[tileId] != null && lookup2[tileId] != buildingId) return false;
+        }
 
 	return true;
 }
@@ -228,7 +240,7 @@ function cleanupBuilding(tile, building, bonus, range) {
 	processBuildingPlacement(tile, building, bonus, range, tileDeactivate, function (a, b) { return a - b; });
 }
 
-function processBuildingPlacement(tile, building, bonus, range, tileAction, bonusCalc) {
+function processBuildingPlacement(tile, building, bonus, range, tileActivation, bonusCalc) {
 	var width = $(building).data("width");
 	var height = $(building).data("height");
 	if (bonus == null) bonus = $(building).data("bonus");
@@ -236,11 +248,29 @@ function processBuildingPlacement(tile, building, bonus, range, tileAction, bonu
 
 	// occupied tiles = tiles covered by the building itself
 	var occupiedTiles = getOccupiedTiles(tile, width, height);
-	$(occupiedTiles).each(function () { tileAction(tile, this, building); });
+    var maxBonus = 0;
+	$(occupiedTiles).each(function () {
+        var occupiedTile = $(this);
+        tileActivation(tile, occupiedTile, building);
+        maxBonus = Math.max(maxBonus, occupiedTile.data("bonus"));
+    });
+
+    // update value of the placed building, if residential
+    if (building.hasClass("residential")) building.data("value", maxBonus).text(maxBonus);
 
 	// affected tiles = tiles within range
 	var affectedTiles = getAffectedTiles(tile, range, width, height);
-	$(affectedTiles).each(function () { updateTileBonus(this, bonus, bonusCalc); });
+	$(affectedTiles).each(function () {
+        var affectedTile = $(this);
+        updateTileBonus(affectedTile, bonus, bonusCalc);
+
+
+    });
+
+
+
+
+
 }
 
 function updateTileBonus(tile, bonus, bonusCalc) {
@@ -258,6 +288,10 @@ function tileDeactivate(originTile, tile, building) {
 	$(tile).removeClass("active");
 	var coords = getCoords(tile);
 	tileLookup[coords.x][coords.y] = null;
+
+    var tileId = $(tile).attr("id");
+    lookup2[tileId] = null;
+    writeLog("lookup $1 = null", tileId);
 }
 
 function tileActivate(originTile, tile, building) {
@@ -265,6 +299,10 @@ function tileActivate(originTile, tile, building) {
 	$(tile).addClass("active");
 	var coords = getCoords(tile);
 	tileLookup[coords.x][coords.y] = building.attr("id");
+
+    var tileId = $(tile).attr("id");
+    lookup2[tileId] =  building.attr("id");
+    writeLog("lookup $1 = $2", tileId, building.attr("id"));
 }
 //</editor-fold>
 
