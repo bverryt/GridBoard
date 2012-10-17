@@ -11,109 +11,33 @@
 var gridboard = new function() {
 
     var NUM_OF_ROWS = 20, NUM_OF_COLS = 30, TILE_SIZE = 20;
-    var buildingLookup = [], tileLookup = [], logCounter = 1;
-    var board, inventory;
 
-    this.init = function () {
-        $("body").disableSelection();
-        board = $("#board");
-        inventory = $("#inventory");
+    this.buildingLookup = [];
+    this.tileLookup = [];
+    this.logCounter = 1;
+    this.board = {};
+    this.inventory = {};
 
-
+    this.init = function (boardSelector, inventorySelector) {
+        this.board = $(boardSelector);
+        this.inventory = $(inventorySelector);
         initBoard();
         initInventory();
         initBuildingEdit();
-    }
+    };
 
-    //<editor-fold desc="INIT">
+    //<editor-fold desc="INIT BOARD/TILES">
 
     function initBoard() {
         for (var y = 1; y <= NUM_OF_ROWS; y++) {
-            var row = $("<tr/>").addClass("row").appendTo(board);
+            var row = $("<tr/>").addClass("row").appendTo(gridboard.board);
             for (var x = 1; x <= NUM_OF_COLS; x++) {
                 var coords = new Coordinates(x, y);
                 var tile = createTile(x, y).appendTo(row);
-                buildingLookup[coords] = null;
+                gridboard.buildingLookup[coords] = null;
             }
         }
     }
-
-    function initInventory() {
-        var br = "<br/>";
-
-        AddToInventory(10, {width:1, height:1, bonus:5,  range:2, type:'decoration'});  inventory.append(br);
-        AddToInventory(3,  {width:2, height:2, bonus:10, range:2, type:'decoration'});
-        AddToInventory(2,  {width:3, height:2, bonus:10, range:2, type:'decoration'});  inventory.append(br);
-        AddToInventory(2,  {width:3, height:3, bonus:25, range:3, type:'decoration'});
-        AddToInventory(3,  {width:2, height:3, bonus:25, range:3, type:'decoration'});  inventory.append(br);
-        AddToInventory(5,  {width:2, height:2, bonus:0,  range:2, type:'residential'}); inventory.append(br);
-        AddToInventory(5,  {width:2, height:2, bonus:0,  range:2, type:'residential'}); inventory.append(br);
-
-        inventory.droppable({ drop: handleInventoryDrop, tolerance: 'fit' });
-        inventory.height(board.height() - 22);
-    }
-
-    function AddToInventory(amount, plan) {
-        // add a set amount of buildings, make make sure each building has a unique id
-        for (var i = 0; i < amount; i++) {
-                var building = createBuilding(plan);
-                var id = "building" + ($(inventory).find(".building").length + 1);
-                building.attr("id", id).appendTo(inventory);
-        }
-    }
-
-    function initBuildingEdit() {
-        // initialize the dialog that edits buildings
-        var buildingEdit = $("<form/>").attr("id", "buildingEdit").appendTo("#theInventory");
-        buildingEdit.append("<label>bonus</label>").append(createTextInput("bonus")).append("<br/>");
-        buildingEdit.append("<label>range</label>").append(createTextInput("range")).append("<br/>");
-        buildingEdit.append("<label>name</label>").append(createTextInput("name")).append("<br/>");
-
-        buildingEdit.dialog({
-            height: 120	, width: 250,
-            autoOpen: false, modal: true, resizable: false,
-            title: "edit building"
-        });
-    }
-    //</editor-fold>
-
-    //<editor-fold desc="EVENT HANDLERS">
-
-    function handleDragStart(event, ui) {
-        resetDragForAllTiles();
-    }
-
-    function handleTileOver(event, ui) {
-        setTileDroppable(this, ui.draggable);
-    }
-
-    function handleTileDrop(event, ui) {
-        moveBuildingToTile(this, ui.draggable);
-    }
-
-    function handleInventoryDrop(event, ui) {
-        moveBuildingToInventory(ui.draggable);
-    }
-
-    function openBuildingEditDialog(building) {
-    // set up the buildingEdit dialog for a specific building
-        var buildingEdit = $("#buildingEdit");
-        // init input default values
-        buildingEdit.find("input[name=bonus]").val($(building).data("bonus"));
-        buildingEdit.find("input[name=range]").val($(building).data("range"));
-        buildingEdit.find("input[name=name]").val($(building).data("name"));
-        buildingEdit.focus(function () { this.select(); });
-        buildingEdit.enter(function () { saveBuildingEdits(buildingEdit, building); });
-        buildingEdit.dialog("open");
-    }
-
-    function handleBuildingDoubleClick(event) {
-        openBuildingEditDialog(this);
-    }
-
-    //</editor-fold>
-
-    //<editor-fold desc="CREATORS">
 
     function createTile(x, y) {
         var tile = $("<td/>").addClass("tile");
@@ -122,10 +46,81 @@ var gridboard = new function() {
         tile.data("bonus", 0);
         tile.droppable({
             accept:".building", tolerance:"pointer", hoverClass:"hovered",
-            over:handleTileOver, drop:handleTileDrop
-        });
-
+            over: setTileDroppable,
+            drop:moveBuildingToTile  });
         return tile;
+    }
+
+    function setTileDroppable(event, ui) {
+        var tile = this;
+        var building = ui.draggable;
+
+        // if the tile is not a valid spot for the building, de-activate droppable.
+        if (!validateTile(tile, building)) { // if invalid
+            var selector = ".building:not(#" + $(building).attr("id") + ")"; // don't deny the current building
+            $(tile).droppable("option", "accept", selector).removeClass("hovered");
+        }
+    }
+
+    function validateTile(tile, building) {
+        // check if building is placeable on a certain tile. Check for edges and overlap.
+
+        var width = $(building).data("width");
+        var height = $(building).data("height");
+        if (width == 1 && height == 1) return true;
+
+        var topLeft = $(tile).data("coords");
+        if (topLeft.x + width - 1 > NUM_OF_COLS) return false; // don't allow overlap of right edge
+        if (topLeft.y + height - 1 > NUM_OF_ROWS) return false; // don't allow overlap of bottom edge
+
+        var buildingId = $(building).attr("id");
+        for (var x = topLeft.x; x < topLeft.x + width; x++)
+            for (var y = topLeft.y; y < topLeft.y + height; y++)
+            {
+                var coords = new Coordinates(x, y);
+                if (gridboard.buildingLookup[coords] != null && gridboard.buildingLookup[coords] != buildingId) return false;
+            }
+
+        return true;
+    }
+
+    function resetDragForAllTiles(event, ui) {
+        // reset all tiles to accept all buildings
+        gridboard.board.find("td.tile").draggable("option", "accept", ".building");
+    }
+
+    //</editor-fold>
+
+    //<editor-fold desc="INIT INVENTORY/BUILDINGS">
+
+    function initInventory() {
+        var inventory = gridboard.inventory;
+        var board = gridboard.board;
+        var br = "<br/>";
+
+        addToInventory(10, {width:1, height:1, bonus:5,  range:2, type:'decoration'});
+        inventory.append(br);
+        addToInventory(3,  {width:2, height:2, bonus:10, range:2, type:'decoration'});
+        addToInventory(2,  {width:3, height:2, bonus:10, range:2, type:'decoration'});
+        inventory.append(br);
+        addToInventory(2,  {width:3, height:3, bonus:25, range:3, type:'decoration'});
+        addToInventory(3,  {width:2, height:3, bonus:25, range:3, type:'decoration'});
+        inventory.append(br);
+        addToInventory(5,  {width:2, height:2, bonus:0,  range:2, type:'residential'}); inventory.append(br);
+        addToInventory(5,  {width:2, height:2, bonus:0,  range:2, type:'residential'}); inventory.append(br);
+        addToInventory(5,  {width:2, height:2, bonus:0,  range:2, type:'residential'}); inventory.append(br);
+
+        inventory.droppable({ drop: moveBuildingToInventory, tolerance: 'fit' });
+        inventory.height(board.height() - 22);
+    }
+
+    function addToInventory(amount, plan) {
+        // add a set amount of buildings, make make sure each building has a unique id
+        for (var i = 0; i < amount; i++) {
+            var building = createBuilding(plan);
+            var id = "building" + ($(gridboard.inventory).find(".building").length + 1);
+            building.attr("id", id).appendTo(gridboard.inventory);
+        }
     }
 
     function createBuilding(plan){
@@ -146,9 +141,9 @@ var gridboard = new function() {
         building.data("value", plan.value);
 
         building.draggable({
-            start:handleDragStart, revert:"invalid", inventory:".building",
-            cursorAt:{ left:5, top:5} });
-        building.dblclick(handleBuildingDoubleClick);
+            start:resetDragForAllTiles,
+            revert:"invalid", inventory:".building", cursorAt:{ left:5, top:5} });
+        building.dblclick(openBuildingEditDialog);
         building.width(TILE_SIZE * plan.width + (plan.width - 1));
         building.height(TILE_SIZE * plan.height + (plan.height - 1));
 
@@ -157,78 +152,26 @@ var gridboard = new function() {
 
     //</editor-fold>
 
-    //<editor-fold desc="ACTIONS">
+    //<editor-fold desc="BUILDING PLACEMENT">
 
+    function moveBuildingToTile(event, ui) {
+        var building  = ui.draggable;
+        var tile = this;
 
-    function resetDragForAllTiles() {
-        // reset all tiles to accept all buildings
-        board.find("td.tile").draggable("option", "accept", ".building");
-    }
-
-    function setTileDroppable(tile, building) {
-        // if the tile is not a valid spot for the building, de-activate droppable.
-        if (!validateTile(tile, building)) { // if invalid
-            var selector = ".building:not(#" + $(building).attr("id") + ")"; // don't deny the current building
-            $(tile).droppable("option", "accept", selector).removeClass("hovered");
-        }
-    }
-    function moveBuildingToTile(tile, building) {
         // handle the movement of a building from one place to another
-        var previousTile = tileLookup[$(building).attr("id")];
+        var previousTile = gridboard.tileLookup[$(building).attr("id")];
         if (previousTile != null) cleanup(previousTile, building);
         place(tile, building); // place on new tile
         building.position({ of:$(tile), my:"left top", at:"left top" });
     }
 
-    function moveBuildingToInventory(building) {
-        // moveBuildingToInventory: handle the placement of a building back into the inventory
-        var previousTile = tileLookup[$(building).attr("id")];
+    function moveBuildingToInventory(event, ui) {
+        var building = ui.draggable;
+
+        // handle the placement of a building back into the inventory
+        var previousTile = gridboard.tileLookup[$(building).attr("id")];
         if (previousTile != null) cleanup(previousTile, building); // remove from old tile
 
-    }
-
-
-    function saveBuildingEdits(buildingEdit, building) {
-        // apply the changes entered via the buildingEdit dialog.
-
-        var currentTile = tileLookup[$(building).attr("id")];
-
-        if (currentTile != null) cleanup(currentTile, building);
-
-        var newBonus = parseInt(buildingEdit.find("input[name=bonus]").val());
-        var newRange = parseInt(buildingEdit.find("input[name=range]").val());
-        var newName = buildingEdit.find("input[name=name]").val();
-
-        $(building).data("bonus", newBonus).text(newBonus);
-        $(building).data("range", newRange);
-        $(building).data("name", newName);
-        if (newName != "") building.text(newName.toUpperCase());
-
-        if (currentTile != null)  place(currentTile, building);
-
-        $(buildingEdit).dialog("close");
-    }
-
-    function validateTile(tile, building) {
-        // check if building is placeable on a certain tile. Check for edges and overlap.
-
-        var width = $(building).data("width");
-        var height = $(building).data("height");
-        if (width == 1 && height == 1) return true;
-
-        var topLeft = $(tile).data("coords");
-        if (topLeft.x + width - 1 > NUM_OF_COLS) return false; // don't allow overlap of right edge
-        if (topLeft.y + height - 1 > NUM_OF_ROWS) return false; // don't allow overlap of bottom edge
-
-        var buildingId = $(building).attr("id");
-        for (var x = topLeft.x; x < topLeft.x + width; x++)
-            for (var y = topLeft.y; y < topLeft.y + height; y++)
-            {
-                var coords = new Coordinates(x, y);
-                if (buildingLookup[coords] != null && buildingLookup[coords] != buildingId) return false;
-            }
-
-        return true;
     }
 
     function place(tile, building) {
@@ -237,10 +180,10 @@ var gridboard = new function() {
         var maxBonus = 0;
 
         $(occupiedTiles).each(function () {
-            tileLookup[$(building).attr("id")] = tile;
+            gridboard.tileLookup[$(building).attr("id")] = tile;
             $(this).addClass("active");
             var coords = $(this).data("coords");
-            buildingLookup[coords] = building.attr("id");
+            gridboard.buildingLookup[coords] = building.attr("id");
             maxBonus = Math.max(maxBonus, $(this).data("bonus"));
         });
 
@@ -258,10 +201,10 @@ var gridboard = new function() {
         var affectedTiles = getAffectedTiles(tile, building);
 
         $(occupiedTiles).each(function () {
-            tileLookup[$(building).attr("id")] = null;
+            gridboard.tileLookup[$(building).attr("id")] = null;
             $(this).removeClass("active");
             var coords = $(this).data("coords");
-            buildingLookup[coords] = null;
+            gridboard.buildingLookup[coords] = null;
         });
 
 
@@ -281,6 +224,61 @@ var gridboard = new function() {
         if (newBonus > 0) $("<div/>").appendTo(tile).text(newBonus);
     }
 
+    //</editor-fold>
+
+    //<editor-fold desc="BUILDING EDIT">
+
+    function initBuildingEdit() {
+        // initialize the dialog that edits buildings
+        var buildingEdit = $("<form/>").attr("id", "buildingEdit").appendTo("#theInventory");
+        buildingEdit.append("<label>bonus</label>").append(createTextInput("bonus")).append("<br/>");
+        buildingEdit.append("<label>range</label>").append(createTextInput("range")).append("<br/>");
+        buildingEdit.append("<label>name</label>").append(createTextInput("name")).append("<br/>");
+
+        buildingEdit.dialog({
+            height: 120	, width: 250,
+            autoOpen: false, modal: true, resizable: false,
+            title: "edit building"
+        });
+    }
+
+    function openBuildingEditDialog(event) {
+        var building = this;
+
+        // set up the buildingEdit dialog for a specific building
+        var buildingEdit = $("#buildingEdit");
+        // init input default values
+        buildingEdit.find("input[name=bonus]").val($(building).data("bonus"));
+        buildingEdit.find("input[name=range]").val($(building).data("range"));
+        buildingEdit.find("input[name=name]").val($(building).data("name"));
+        buildingEdit.focus(function () { this.select(); });
+        buildingEdit.enter(function () { saveBuildingEdits(buildingEdit, building); });
+        buildingEdit.dialog("open");
+    }
+
+    function saveBuildingEdits(buildingEdit, building) {
+        // apply the changes entered via the buildingEdit dialog.
+
+        var currentTile = gridboard.tileLookup[$(building).attr("id")];
+        if (currentTile != null) cleanup(currentTile, building);
+
+        var newBonus = parseInt(buildingEdit.find("input[name=bonus]").val());
+        var newRange = parseInt(buildingEdit.find("input[name=range]").val());
+        var newName = buildingEdit.find("input[name=name]").val();
+
+        $(building).data("bonus", newBonus).text(newBonus);
+        $(building).data("range", newRange);
+        $(building).data("name", newName);
+
+        if (newName != "") building.text(newName.toUpperCase());
+        if (currentTile != null)  place(currentTile, building);
+
+        $(buildingEdit).dialog("close");
+    }
+
+    //</editor-fold>
+
+    //<editor-fold desc="HELPERS">
 
     function getOccupiedTiles(originTile, building) {
         var occupiedTiles = [];
@@ -289,7 +287,7 @@ var gridboard = new function() {
 
         var origin = $(originTile).data("coords");
         // TODO: find a better occupied/affected test than scanning the entire board
-        board.find("td").each(function () {
+        gridboard.board.find("td").each(function () {
             var coords = $(this).data("coords");
             if (coords.x >= origin.x && coords.x < origin.x + width)
                 if (coords.y >= origin.y && coords.y < origin.y + height)
@@ -305,7 +303,7 @@ var gridboard = new function() {
         var range = $(building).data("range");
 
         var origin = $(originTile).data("coords");
-        board.find("td").each(function () {
+        gridboard.board.find("td").each(function () {
             var coords = $(this).data("coords");
             if (coords.x >= origin.x - range && coords.x < origin.x + range + width)
                 if (coords.y >= origin.y - range && coords.y < origin.y + range + height)
@@ -315,32 +313,12 @@ var gridboard = new function() {
     }
 
 
-    //</editor-fold>
-
-    //<editor-fold desc="HELPERS">
-
-
-    function Coordinates(x,y) {
-        this.x = x;
-        this.y = y;
-    }
-
-    Coordinates.prototype.toString = function() {
-        return this.x + "_" + this.y;
-    };
-
-    (function ($) { $.fn.enter = function (handler) {
-            // Handler for the "enter" keypress. Will only work once, then unbind.
-            return $(this).keypress(function (event) {
-                if (event.which == 13) { event.preventDefault(); handler(); $(this).unbind(event); }
-            });
-    }})(jQuery);
 
 
     //noinspection JSUnusedGlobalSymbols
     function writeLog(message, p1, p2, p3, p4, p5) {
         var log = message.replace("$1",p1).replace("$2",p2).replace("$3",p3).replace("$4",p4).replace("$5", p5);
-        console.log(logCounter++ + ": " + log);
+        console.log(gridboard.logCounter++ + ": " + log);
     }
 
     function createTextInput(name){
@@ -352,3 +330,18 @@ var gridboard = new function() {
 
 };
 
+(function ($) {
+    $.fn.enter = function (handler) {
+        // Handler for the "enter" keypress. Will only work once, then unbind.
+        return $(this).keypress(function (event) {
+            if (event.which == 13) { event.preventDefault(); handler(); $(this).unbind(event); }
+        });
+    }
+})(jQuery);
+
+function Coordinates(x,y) {
+    this.x = x;
+    this.y = y;
+}
+
+Coordinates.prototype.toString = function() {     return this.x + "_" + this.y; };

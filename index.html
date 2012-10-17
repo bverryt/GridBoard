@@ -9,8 +9,10 @@
 	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.9/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="scripts/gridboard.js" ></script>
 	<script type="text/javascript">
-        $(gridboard.init)
-
+        $(function() {
+            $("body").disableSelection();
+            gridboard.init("#board", "#inventory");
+        });
 	</script>
 </head>
 <body>
