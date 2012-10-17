@@ -7,7 +7,6 @@
 // TODO: re-write as a generic board game plugin
 // TODO: use prototyping for the building plans
 
-
 var gridboard = new function() {
 
     var NUM_OF_ROWS = 20, NUM_OF_COLS = 30, TILE_SIZE = 20;
@@ -230,11 +229,10 @@ var gridboard = new function() {
 
     function initBuildingEdit() {
         // initialize the dialog that edits buildings
-        var buildingEdit = $("<form/>").attr("id", "buildingEdit").appendTo("#theInventory");
+        var buildingEdit = $("<form/>").attr("id", "buildingEdit").appendTo(gridboard.inventory);
         buildingEdit.append("<label>bonus</label>").append(createTextInput("bonus")).append("<br/>");
         buildingEdit.append("<label>range</label>").append(createTextInput("range")).append("<br/>");
         buildingEdit.append("<label>name</label>").append(createTextInput("name")).append("<br/>");
-
         buildingEdit.dialog({
             height: 120	, width: 250,
             autoOpen: false, modal: true, resizable: false,
@@ -243,16 +241,24 @@ var gridboard = new function() {
     }
 
     function openBuildingEditDialog(event) {
+
         var building = this;
 
         // set up the buildingEdit dialog for a specific building
         var buildingEdit = $("#buildingEdit");
         // init input default values
+
         buildingEdit.find("input[name=bonus]").val($(building).data("bonus"));
         buildingEdit.find("input[name=range]").val($(building).data("range"));
         buildingEdit.find("input[name=name]").val($(building).data("name"));
-        buildingEdit.focus(function () { this.select(); });
-        buildingEdit.enter(function () { saveBuildingEdits(buildingEdit, building); });
+        buildingEdit.focus(function () { $("input[name=bonus]").select(); });
+        buildingEdit.keypress(function (event) {
+            if (event.which == 13) { // pressed ENTER
+                event.preventDefault();
+                saveBuildingEdits(buildingEdit, building);
+                $(this).unbind(event); } // unbind is important, otherwise it will keep listening for this building
+        });
+
         buildingEdit.dialog("open");
     }
 
@@ -270,7 +276,7 @@ var gridboard = new function() {
         $(building).data("range", newRange);
         $(building).data("name", newName);
 
-        if (newName != "") building.text(newName.toUpperCase());
+        if (newName != "") $(building).text(newName.toUpperCase());
         if (currentTile != null)  place(currentTile, building);
 
         $(buildingEdit).dialog("close");
@@ -312,9 +318,6 @@ var gridboard = new function() {
         return affectedTiles;
     }
 
-
-
-
     //noinspection JSUnusedGlobalSymbols
     function writeLog(message, p1, p2, p3, p4, p5) {
         var log = message.replace("$1",p1).replace("$2",p2).replace("$3",p3).replace("$4",p4).replace("$5", p5);
@@ -328,20 +331,21 @@ var gridboard = new function() {
 
     //</editor-fold>
 
+    //<editor-fold desc="COORDINATES">
+    function Coordinates(x,y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    Coordinates.prototype.toString = function() {     return this.x + "_" + this.y; };
+    //</editor-fold>
+
+
+
 };
 
-(function ($) {
-    $.fn.enter = function (handler) {
-        // Handler for the "enter" keypress. Will only work once, then unbind.
-        return $(this).keypress(function (event) {
-            if (event.which == 13) { event.preventDefault(); handler(); $(this).unbind(event); }
-        });
-    }
-})(jQuery);
 
-function Coordinates(x,y) {
-    this.x = x;
-    this.y = y;
-}
 
-Coordinates.prototype.toString = function() {     return this.x + "_" + this.y; };
+
+
+
